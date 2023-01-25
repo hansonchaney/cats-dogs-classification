@@ -1,0 +1,150 @@
+import os, cv2, itertools # cv2 -- OpenCV
+import numpy as np 
+import pandas as pd 
+import time
+ 
+import matplotlib.pyplot as plt 
+%matplotlib inline
+from sklearn.model_selection import train_test_split
+
+TRAIN_DIR = r'C:\Users\Hanson C\Downloads\sus\train\train'  
+ROWS = 64
+COLS = 64
+CHANNELS = 3
+
+os.listdir(TRAIN_DIR)[0:5]
+
+train_images = [TRAIN_DIR+'\\'+i for i in os.listdir(TRAIN_DIR)]
+train_images[0:2]
+
+for i,image_file in enumerate(train_images) :
+    img = cv2.imread(image_file, cv2.IMREAD_COLOR)
+    img_resized = cv2.resize(img, (ROWS, COLS),interpolation=cv2.INTER_CUBIC)
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    ax1.imshow(img)
+    ax2.imshow(img_resized)
+    plt.show()
+    print('i = ', i)
+    print(image_file)
+    print('Shape of resized image is {}'. format(img_resized.shape))
+    time.sleep(2)
+    if i==2:
+        break
+        
+img_resized.shape
+
+# falttens matrix to vector rank 0 type
+x = np.squeeze(img_resized.reshape((ROWS*COLS*CHANNELS,1)))
+x.shape
+
+print(image_file)
+if 'cat' in image_file.lower() :
+    print('cat, output = 1')
+else:
+    print('dog, output = 0')
+
+'dog' in image_file.lower()
+
+def read_image(file_path):
+  img = cv2.imread(file_path, cv2.IMREAD_COLOR)
+  return cv2.resize(img, (ROWS, COLS),interpolation=cv2.INTER_CUBIC)
+  
+def prep_data(images):
+  m = len(images)
+  nx = ROWS*COLS*CHANNELS
+  
+  X = np.ndarray((nx,m), dtype=np.uint8)
+  y = np.zeros((1,m))
+  print("X.shape is {}".format(X.shape))
+  
+  for i,image_file in enumerate(images) :
+    image = read_image(image_file)
+    X[:,i] = np.squeeze(image.reshape((nx,1)))
+    if 'dog' in image_file.lower() :
+      y[0,i] = 1
+    elif 'cat' in image_file.lower() :
+      y[0,i] = 0
+    else : # for test data
+      y[0,i] = image_file.split('/')[-1].split('.')[0]
+      
+    if i%5000 == 0 :
+      print("Proceed {} of {}".format(i, m))
+    
+  return X,y
+
+X, Y = prep_data(train_images)
+
+print(X.shape)
+print(Y.shape)
+
+X_train, X_test, Y_train, Y_test = train_test_split(X.T, Y.T, test_size = 0.2, random_state=2)
+m_train = len(Y_train)
+m_test = len(Y_test)
+X_train = X_train.T
+X_test = X_test.T
+Y_train = Y_train.T
+Y_test = Y_test.T
+print("Shape of x train values is : ", X_train.shape)
+print("Shape of x test values is : ", X_test.shape)
+print("Shape of y train values is : ", Y_train.shape)
+print("Shape of y test values is : ", Y_test.shape)
+
+X_train = X_train/255
+X_test = X_test/255
+n = X_train.shape[0]
+m = X_train.shape[1]
+print(n)
+print(m)
+
+def sigmoid(z):
+    a = (1 / (1 + np.exp(-z)))
+    return a
+    
+epoch=2000
+alpha=0.002
+W = np.zeros((n,1))
+b = 0
+cost = np.zeros((epoch, 1))
+
+for i in range(epoch):
+    
+    Z = np.dot(W.T, X_train) + b
+    A = sigmoid(Z)
+    L = -(Y_train*np.log(A)+(1-Y_train)*np.log(1-A))
+    cost[i] = (1/m)*np.sum(L)
+    dZ= A-Y_train
+    dW= np.dot(X_train, dZ.T)/m
+    db= np.sum(dZ)/m
+    W = W - alpha*dW
+    b = b - alpha*db
+    
+    if i%100 == 0:
+        print('Index i = ', i)
+        print('Cost = ')
+        print(cost[i])
+    
+plt.plot(cost)
+plt.title('Cost vs iterations')
+
+file = "download.jpg"
+test_image = read_image(file)
+X_img = test_image.reshape(1, ROWS*COLS*CHANNELS).T/255
+Z = np.dot(W.T, X_img) + b
+A = sigmoid(Z)
+if A>.5:
+    print('Prediction: CAT with probability {}%'. format(A*100))
+else:
+    print('Prediction: DOG with probability {}%'. format(100-A*100))
+plt.imshow(test_image)
+
+file = "suspart2.jpg"
+test_image = read_image(file)
+X_img = test_image.reshape(1, ROWS*COLS*CHANNELS).T/255
+Z = np.dot(W.T, X_img) + b
+A = sigmoid(Z)
+if A>.5:
+    print('Prediction: CAT with probability {}%'. format(A*100))
+else:
+    print('Prediction: DOG with probability {}%'. format(100-A*100))
+plt.imshow(test_image)
+
